@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "216388526790",
+    "firebase_url": "https://transova-default-rtdb.firebaseio.com",
+    "project_id": "transova",
+    "storage_bucket": "transova.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:216388526790:android:95f6d43597c6679ec86dc7",
+        "android_client_info": {
+          "package_name": "com.example.transova"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHpj7Gn3CU_Jh3ItcM0dSkHMkpK5bKxu4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
