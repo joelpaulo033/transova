@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
@@ -26,14 +28,13 @@ class AuthService extends ChangeNotifier {
     });
   }
 
-  // In AuthService class:
   bool hasRole(UserRole requiredRole) {
     if (_currentUser == null) return false;
 
     // Logic: Admins can see everything
     if (_currentUser!.role == UserRole.admin) return true;
 
-    // Managers can see everything except Admin-only stuff (Optional)
+    // Managers can see everything except Admin-only stuff
     if (_currentUser!.role == UserRole.manager && requiredRole != UserRole.admin) return true;
 
     // Exact match for drivers or others
@@ -71,6 +72,14 @@ class AuthService extends ChangeNotifier {
 
           await credential.user?.updateDisplayName('System Admin');
           await credential.user?.reload();
+
+          // Add admin to Firestore so they show up in user management
+          await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
+            'email': email,
+            'name': 'System Admin',
+            'role': 'admin',
+          });
+
           return true; // Successfully created and logged in
         } catch (createError) {
           debugPrint('Auto-create Admin Error: $createError');
@@ -92,6 +101,14 @@ class AuthService extends ChangeNotifier {
       );
 
       await credential.user?.updateDisplayName(name);
+
+      // Save customer to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
+        'email': email,
+        'name': name,
+        'role': 'customer',
+      });
+
       await credential.user?.reload();
       return true;
     } on FirebaseAuthException catch (e) {
@@ -123,12 +140,37 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> adminCreateUser(String email, String name, UserRole role) async {
+  // FIXED: Corrected parameters to match UI and implemented Firestore save
+  Future<void> adminCreateUser(String email, String password, String name, UserRole role) async {
     try {
-      debugPrint('Admin user creation stub for $name ($email) as ${role.name}. Requires secure backend integration.');
-      await Future.delayed(const Duration(milliseconds: 500));
+      // 1. Create a secondary Firebase App.
+      // If we use the primary instance, Firebase will log the Admin out!
+      FirebaseApp tempApp = await Firebase.initializeApp(
+        name: 'tempRegistration',
+        options: Firebase.app().options,
+      );
+
+      // 2. Register the user on the secondary app
+      UserCredential credential = await FirebaseAuth.instanceFor(app: tempApp)
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      await credential.user?.updateDisplayName(name);
+
+      // 3. Save their data to Firestore so your Admin Panel list can see them
+      await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
+        'email': email,
+        'name': name,
+        'role': role.name, // Saves 'driver', 'manager', or 'customer'
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 4. Delete the temporary app instance so it doesn't cause memory leaks
+      await tempApp.delete();
+
+      debugPrint('Successfully created user: $name ($email) as ${role.name}');
     } catch (e) {
       debugPrint('Admin Create User Error: $e');
+      throw Exception('Failed to create user: $e');
     }
   }
 }
