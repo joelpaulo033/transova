@@ -1,1 +1,16 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"transova","appId":"1:216388526790:android:95f6d43597c6679ec86dc7","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"transova","configurations":{"android":"1:216388526790:android:95f6d43597c6679ec86dc7","ios":"1:216388526790:ios:3183e78a15e87f88c86dc7","web":"1:216388526790:web:1bf93ea1661ca229c86dc7"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
