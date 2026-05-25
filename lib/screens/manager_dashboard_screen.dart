@@ -10,134 +10,140 @@ class ManagerDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TransovaTheme.background,
-      appBar: AppBar(
-        backgroundColor: TransovaTheme.surface,
-        title: const Text('Operations Manager', style: TextStyle(color: TransovaTheme.primary, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined, color: TransovaTheme.onSurfaceVariant), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.logout, color: TransovaTheme.error), onPressed: () => authService.logout()),
+      backgroundColor: const Color(0xfff5f7fa), // Distinct light-gray background
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          SliverPadding(
+            padding: const EdgeInsets.all(20),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildOperationalHighlights(),
+                const SizedBox(height: 24),
+                _buildActionRequiredSection(context),
+                const SizedBox(height: 24),
+                _buildOperationalFleetGrid(),
+              ]),
+            ),
+          ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: TransovaTheme.primary,
+      flexibleSpace: FlexibleSpaceBar(
+        title: const Text('Ops Command Center', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        background: Container(color: TransovaTheme.primary),
+      ),
+      actions: [
+        IconButton(icon: const Icon(Icons.notifications_active, color: Colors.white), onPressed: () {}),
+        IconButton(icon: const Icon(Icons.logout, color: Colors.white), onPressed: () => authService.logout()),
+      ],
+    );
+  }
+
+  Widget _buildOperationalHighlights() {
+    return Row(
+      children: [
+        _buildHighlightMetric('Active Operations', '12', Icons.trending_up, Colors.blue),
+        const SizedBox(width: 16),
+        _buildHighlightMetric('Urgent Reviews', '4', Icons.error_outline, TransovaTheme.error),
+      ],
+    );
+  }
+
+  Widget _buildHighlightMetric(String label, String value, IconData icon, Color accent) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        ),
+        child: Row(
           children: [
-            // Quick Stats
-            Row(
-              children: [
-                Expanded(child: _buildStatCard('Active Trips', '12', Icons.local_shipping, TransovaTheme.primary)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildStatCard('Pending Approvals', '4', Icons.assignment_late, TransovaTheme.secondary)),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Pending Approvals Section
-            const Text('Action Required: Bookings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 2, // Example count
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  color: TransovaTheme.surfaceContainerLowest,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: TransovaTheme.outlineVariant)),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    title: Text('Customer Request #${1050 + index}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Dar es Salaam → Dodoma\nRequires: 5 Ton Truck'),
-                    isThreeLine: true,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.cancel_outlined, color: TransovaTheme.error),
-                          onPressed: () {},
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: TransovaTheme.primary),
-                          onPressed: () {},
-                          child: const Text('Approve'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Fleet Status Overview
-            const Text('Fleet Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: TransovaTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: TransovaTheme.outlineVariant),
-              ),
-              child: Column(
-                children: [
-                  _buildFleetRow('TRK-8829', 'In Transit', TransovaTheme.primary),
-                  const Divider(),
-                  _buildFleetRow('TRK-1044', 'Available', Colors.green),
-                  const Divider(),
-                  _buildFleetRow('TRK-9902', 'Maintenance', TransovaTheme.error),
-                ],
-              ),
-            )
+            Icon(icon, color: accent, size: 32),
+            const SizedBox(width: 16),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(label, style: const TextStyle(color: Colors.grey)),
+            ]),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildActionRequiredSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Pending Approvals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        ...List.generate(2, (index) => _buildApprovalTile(index)),
+      ],
+    );
+  }
+
+  Widget _buildApprovalTile(int index) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border(left: BorderSide(color: TransovaTheme.secondary, width: 4)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color),
-          const SizedBox(height: 12),
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-          Text(title, style: TextStyle(fontSize: 12, color: color.withOpacity(0.8))),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Booking Ref: #TX-${1000 + index}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Priority: High | Route: DSM to DOD', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ]),
+          Row(children: [
+            TextButton(onPressed: () {}, child: const Text('Reject', style: TextStyle(color: Colors.red))),
+            ElevatedButton(onPressed: () {}, child: const Text('Authorize')),
+          ])
         ],
       ),
     );
   }
 
-  Widget _buildFleetRow(String truckId, String status, Color statusColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildOperationalFleetGrid() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.local_shipping, color: TransovaTheme.onSurfaceVariant),
-              const SizedBox(width: 12),
-              Text(truckId, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ],
+          const Text('Fleet Health Status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildFleetStatusItem('TRK-8829', 0.92, 'Operational'),
+          _buildFleetStatusItem('TRK-9902', 0.45, 'Maintenance'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFleetStatusItem(String id, double health, String status) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Text(id, style: const TextStyle(fontWeight: FontWeight.bold, )),
+          Expanded(
+            child: LinearProgressIndicator(value: health, color: health > 0.8 ? Colors.green : Colors.orange),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
-          )
+          const SizedBox(width: 16),
+          Text(status, style: TextStyle(color: health > 0.8 ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
         ],
       ),
     );

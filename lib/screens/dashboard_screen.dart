@@ -22,7 +22,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Helper for TZS conversion: $1 USD = 2600 TZS
   String formatCurrency(double usdAmount) {
     double tzsAmount = usdAmount * 2600;
-    return 'TZS ${tzsAmount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]},")}';
+    // FIXED: Used double quotes for the inner RegExp pattern to avoid syntax errors
+    return 'TZS ${tzsAmount.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")}';
   }
 
   void _protectedAction(VoidCallback action) {

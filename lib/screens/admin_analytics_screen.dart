@@ -5,8 +5,6 @@ import '../themes/transova_theme.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'dashboard_screen.dart';
-import 'request_transport_screen.dart';
-import 'fleet_maintenance_screen.dart';
 import 'sanitation_ops_screen.dart';
 import 'live_tracking_screen.dart';
 
@@ -19,7 +17,7 @@ class AdminAnalyticsScreen extends StatefulWidget {
 }
 
 class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
-  int _currentNavIndex = 3;
+  int _currentNavIndex = 2; // Adjusted index to reflect the simplified navigation
   bool _showUserManagement = false;
 
   // Helper for TZS conversion: $1 USD = 2600 TZS
@@ -39,12 +37,9 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         nextScreen = DashboardScreen(authService: widget.authService);
         break;
       case 1:
-        nextScreen = const RequestTransportScreen();
+        nextScreen = SanitationOpsScreen(authService: widget.authService);
         break;
       case 2:
-        nextScreen = const FleetMaintenanceScreen();
-        break;
-      case 3:
       // Double security check for navigation
         if (user?.role != UserRole.admin) return;
         return;
@@ -163,8 +158,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         onDestinationSelected: _onNavTap,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.event_note), label: 'Bookings'),
-          NavigationDestination(icon: Icon(Icons.local_shipping_outlined), label: 'Fleet'),
+          NavigationDestination(icon: Icon(Icons.delete_sweep), label: 'Sanitation'),
           NavigationDestination(icon: Icon(Icons.analytics), label: 'Admin'),
         ],
       ),
@@ -262,13 +256,10 @@ class _DesktopNavigationSidebarWidget extends StatelessWidget {
             child: Column(
               children: [
                 _buildSidebarItem(context, icon: Icons.grid_view, label: 'Dashboard', screen: DashboardScreen(authService: authService)),
-                _buildSidebarItem(context, icon: Icons.map, label: 'Fleet Tracking', screen: const LiveTrackingScreen()),
-                _buildSidebarItem(context, icon: Icons.event_note, label: 'Bookings', screen: const RequestTransportScreen()),
+                _buildSidebarItem(context, icon: Icons.delete_sweep, label: 'Sanitation Ops', screen: SanitationOpsScreen(authService: authService)),
                 _buildSidebarItem(context, icon: Icons.analytics, label: 'Analytics', isSelected: !isUserManagementSelected, onTap: () => onUserManagementToggle(false)),
                 _buildSidebarItem(context, icon: Icons.people, label: 'User Management', isSelected: isUserManagementSelected, onTap: () => onUserManagementToggle(true)),
-                _buildSidebarItem(context, icon: Icons.delete_sweep, label: 'Sanitation Ops', screen: const SanitationOpsScreen()),
                 const Spacer(),
-                _buildSidebarItem(context, icon: Icons.settings, label: 'Settings'),
                 _buildSidebarItem(context, icon: Icons.logout, label: 'Logout', onTap: () => authService.logout()),
               ],
             ),
@@ -384,7 +375,6 @@ class _UserManagementSection extends StatelessWidget {
       trailing: PopupMenuButton(
         itemBuilder: (context) => [
           const PopupMenuItem(value: 'reset', child: Text('Reset Password')),
-          const PopupMenuItem(value: 'edit', child: Text('Edit Role')),
           const PopupMenuItem(value: 'delete', child: Text('Deactivate', style: TextStyle(color: TransovaTheme.error))),
         ],
         onSelected: (value) async {
@@ -395,8 +385,6 @@ class _UserManagementSection extends StatelessWidget {
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
             }
-          } else if (value == 'delete') {
-            // Add your deactivate logic targeting the uid here
           }
         },
       ),
@@ -442,11 +430,10 @@ class _UserManagementSection extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Make sure your AuthService's adminCreateUser accepts a password parameter now!
                   await authService.adminCreateUser(
                       emailController.text,
-                      passwordController.text, // Added password here
-                      nameController.text as String,
+                      passwordController.text,
+                      nameController.text,
                       selectedRole
                   );
                   Navigator.pop(context);
@@ -473,7 +460,6 @@ class _MetricCardsBentoGridWidget extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('dashboard').doc('metrics').snapshots(),
         builder: (context, snapshot) {
-          // Fallback zeros if no data is found yet
           double totalRevenue = 0.0;
           String utilRate = "0%";
           String activeBookings = "0";
@@ -552,8 +538,6 @@ class _GlobalFleetMapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ideally use google_maps_flutter connected to firebase geopoints here.
-    // Kept the UI shell as requested.
     return Container(
       height: 400,
       decoration: BoxDecoration(
@@ -648,7 +632,6 @@ class _FleetStatusListWidget extends StatelessWidget {
                           status: status,
                           extra: data['extra'] ?? '',
                           isTransit: status == 'In Transit',
-                          isAvailable: status == 'Available',
                           isMaintenance: status == 'Maintenance'
                       );
                     },
@@ -661,7 +644,7 @@ class _FleetStatusListWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildVehicleTile(BuildContext context, {required String id, required String model, required String status, required String extra, required bool isTransit, bool isAvailable = false, bool isMaintenance = false}) {
+  Widget _buildVehicleTile(BuildContext context, {required String id, required String model, required String status, required String extra, required bool isTransit, bool isMaintenance = false}) {
     Color badgeBg = TransovaTheme.surfaceContainerHigh;
     Color badgeText = TransovaTheme.onSurfaceVariant;
 
@@ -674,13 +657,6 @@ class _FleetStatusListWidget extends StatelessWidget {
     }
 
     return InkWell(
-      onTap: () {
-        if (isTransit) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveTrackingScreen()));
-        } else if (isMaintenance) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const FleetMaintenanceScreen()));
-        }
-      },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
@@ -749,7 +725,7 @@ class _RevenueTrendsChartWidget extends StatelessWidget {
               if (rawData != null && rawData.length == 7) {
                 dailyRevenues = rawData.map((e) => (e as num).toDouble()).toList();
                 maxRev = dailyRevenues.reduce((curr, next) => curr > next ? curr : next);
-                if (maxRev == 0) maxRev = 1.0; // avoid division by zero
+                if (maxRev == 0) maxRev = 1.0;
               }
             }
 
@@ -805,9 +781,7 @@ class _RevenueTrendsChartWidget extends StatelessWidget {
   }
 
   Widget _buildBar({required double heightPercentage, required String label, bool isActive = false}) {
-    // Provide a small baseline height so empty bars still show up slightly
     double safeHeight = heightPercentage < 0.05 ? 0.05 : heightPercentage;
-
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -865,11 +839,8 @@ class _CriticalOperationsWidget extends StatelessWidget {
                 return Column(
                   children: snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-
-                    // Map severity strings to colors/icons
                     Color alertColor = TransovaTheme.primary;
                     IconData icon = Icons.info;
-
                     if (data['severity'] == 'high') {
                       alertColor = const Color(0xFFBA1A1A);
                       icon = Icons.thermostat;
@@ -879,17 +850,9 @@ class _CriticalOperationsWidget extends StatelessWidget {
                     } else if (data['severity'] == 'route') {
                       icon = Icons.route;
                     }
-
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
-                      child: _buildAlertRow(
-                          context,
-                          icon: icon,
-                          title: data['title'] ?? 'Alert',
-                          desc: data['description'] ?? '',
-                          actionText: data['actionText'] ?? 'VIEW',
-                          alertColor: alertColor
-                      ),
+                      child: _buildAlertRow(context, icon: icon, title: data['title'] ?? 'Alert', desc: data['description'] ?? '', actionText: data['actionText'] ?? 'VIEW', alertColor: alertColor),
                     );
                   }).toList(),
                 );
@@ -929,9 +892,7 @@ class _CriticalOperationsWidget extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveTrackingScreen()));
-            },
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveTrackingScreen())),
             child: Text(actionText, style: TextStyle(color: alertColor, fontWeight: FontWeight.bold, fontSize: 11)),
           )
         ],

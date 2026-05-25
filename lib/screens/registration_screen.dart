@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../themes/transova_theme.dart';
 import '../services/auth_service.dart';
-import 'registration_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   final AuthService authService;
@@ -22,20 +21,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Sanitized inputs using trim()
       final success = await widget.authService.register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _nameController.text.trim(),
       );
 
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (!mounted) return;
 
-      if (success && mounted) {
-        Navigator.pop(context);
-      } else if (mounted) {
+      setState(() => _isLoading = false);
+
+      if (success) {
+        // PERFORMANCE: Clears stack and returns to login route defined in your main.dart
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registration failed. Please try again.')),
         );
@@ -80,7 +79,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   labelText: 'Full Name',
                   prefixIcon: Icon(Icons.person),
                 ),
-                validator: (value) => value!.isEmpty ? 'Enter your name' : null,
+                validator: (value) => (value?.isEmpty ?? true) ? 'Enter your name' : null,
               ),
               const SizedBox(height: TransovaTheme.spaceMd),
               TextFormField(
@@ -90,7 +89,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email),
                 ),
-                validator: (value) => value!.isEmpty ? 'Enter your email' : null,
+                validator: (value) => (value?.isEmpty ?? true) ? 'Enter your email' : null,
               ),
               const SizedBox(height: TransovaTheme.spaceMd),
               TextFormField(
@@ -100,18 +99,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   labelText: 'Password',
                   prefixIcon: Icon(Icons.lock),
                 ),
-                validator: (value) => value!.length < 6 ? 'Password too short' : null,
+                validator: (value) => (value?.length ?? 0) < 6 ? 'Password too short' : null,
               ),
               const SizedBox(height: TransovaTheme.spaceLg),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleRegister,
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                )
                     : const Text('Register'),
               ),
               const SizedBox(height: TransovaTheme.spaceMd),
               const Text(
-                'By registering, you will be assigned the "Customer" role by default.',
+                'By registering, you will be our "Customer"',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: TransovaTheme.outline),
               ),
