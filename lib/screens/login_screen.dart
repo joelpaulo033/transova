@@ -1,100 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../themes/transova_theme.dart';
 import '../services/auth_service.dart';
-import '../models/user_model.dart';
-import 'registration_screen.dart';
-import 'dashboard_screen.dart';
-import 'sanitation_ops_screen.dart';
-import 'admin_analytics_screen.dart';
-import 'driver_dashboard_screen.dart';
-import 'manager_dashboard_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  final AuthService authService;
-  const LoginScreen({super.key, required this.authService});
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
 
-  void _handleLogin() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password.')),
-      );
+  bool _isLoading = false;
+  bool _isLogin = true; // Toggles between Login and Register modes
+  bool _isPasswordVisible = false;
+
+  // Strict Password Validator
+  bool _isPasswordStrong(String password) {
+    // Requires at least 6 chars, 1 uppercase, 1 lowercase, and 1 number
+    final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\w\W]{6,}$');
+    return regex.hasMatch(password);
+  }
+
+  void _submitForm() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || (!_isLogin && name.isEmpty)) {
+      _showError('Please fill in all fields.');
+      return;
+    }
+
+    if (!_isLogin && !_isPasswordStrong(password)) {
+      _showError('Password must be at least 6 characters and contain an uppercase letter, a lowercase letter, and a number.');
       return;
     }
 
     setState(() => _isLoading = true);
 
-    final success = await widget.authService.login(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (success) {
-      final user = widget.authService.currentUser;
-      if (user == null) return;
-
-      // Role-based redirection
-      switch (user.role) {
-        case UserRole.admin:
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AdminAnalyticsScreen(authService: widget.authService)));
-          break;
-        case UserRole.manager:
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ManagerDashboardScreen(authService: widget.authService)));
-          break;
-        case UserRole.driver:
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DriverDashboardScreen(authService: widget.authService)));
-          break;
-        default:
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(authService: widget.authService)));
+    try {
+      final authService = ref.read(authServiceProvider);
+      if (_isLogin) {
+        await authService.login(email, password);
+      } else {
+        // Registration automatically assigns the 'customer' role in AuthService
+        await authService.register(email, password, name);
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login failed. Please check your credentials.')),
-      );
+    } catch (e) {
+      if (mounted) _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showPasswordResetDialog() {
-    final resetEmailController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Password'),
-        content: TextField(
-          controller: resetEmailController,
-          decoration: const InputDecoration(labelText: 'Enter your email'),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              await widget.authService.resetPassword(resetEmailController.text.trim());
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the email exists, a reset link has been sent.')));
-              }
-            },
-            child: const Text('Send Reset Link'),
+  void _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showError('Please enter your email address to reset your password.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authServiceProvider).resetPassword(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Password reset link sent to your email!'),
+              backgroundColor: Colors.green
           ),
-        ],
-      ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Clean up the error string to remove technical jargon
+        String errorText = e.toString();
+        if (errorText.startsWith('Exception: ')) {
+          errorText = errorText.replaceFirst('Exception: ', '');
+        }
+        _showError(errorText);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -107,36 +111,110 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(TransovaTheme.spaceLg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.local_shipping, size: 80, color: TransovaTheme.primary),
-              const SizedBox(height: TransovaTheme.spaceLg),
-              Text('Transova Logistics', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineLarge),
-              const SizedBox(height: TransovaTheme.spaceMd),
-              TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email))),
-              const SizedBox(height: TransovaTheme.spaceMd),
-              TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password', prefixIcon: Icon(Icons.lock))),
-              const SizedBox(height: TransovaTheme.spaceLg),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Login'),
+          child: Center(
+            // This ConstrainedBox forces the form to stay centered and narrow on large desktop/web screens
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.local_shipping, size: 80, color: TransovaTheme.primary),
+                  const SizedBox(height: TransovaTheme.spaceLg),
+                  Text(
+                      _isLogin ? 'Welcome Back' : 'Create Account',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineLarge
+                  ),
+                  const SizedBox(height: TransovaTheme.spaceMd),
+
+                  // Only show Name field during Registration
+                  if (!_isLogin) ...[
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: TransovaTheme.spaceMd),
+                  ],
+
+                  TextField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: TransovaTheme.spaceMd),
+
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+
+                  if (_isLogin)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _isLoading ? null : _handleForgotPassword,
+                        child: const Text('Forgot Password?'),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: TransovaTheme.spaceLg),
+
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                    )
+                        : Text(_isLogin ? 'Login' : 'Register'),
+                  ),
+
+                  const SizedBox(height: TransovaTheme.spaceMd),
+
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLogin = !_isLogin;
+                        // Clear fields when switching modes
+                        _passwordController.clear();
+                        if (!_isLogin) _nameController.clear();
+                      });
+                    },
+                    child: Text(
+                        _isLogin
+                            ? 'Don\'t have an account? Sign up'
+                            : 'Already have an account? Login'
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: TransovaTheme.spaceMd),
-              TextButton(onPressed: _showPasswordResetDialog, child: const Text('Forgot Password?')),
-              TextButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => RegistrationScreen(authService: widget.authService))),
-                child: const Text('Don\'t have an account? Register'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  await widget.authService.continueAsGuest();
-                  if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(authService: widget.authService)));
-                },
-                child: const Text('Continue as Guest', style: TextStyle(color: TransovaTheme.outline)),
-              ),
-            ],
+            ),
           ),
         ),
       ),

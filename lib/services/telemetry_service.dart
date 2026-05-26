@@ -1,46 +1,70 @@
-import 'dart:async';
-import 'dart:math' as math;
-// import 'package:firebase_database/firebase_database.dart'; // Uncomment when firebase_database is added to pubspec
-import '../models/vehicle_telemetry.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:transova/models/vehicle_telemetry.dart';
+
+/// Model representing the IoT hardware telemetry from the ESP8266
+class DeviceTelemetry {
+  final String deviceId;
+  final double lat;
+  final double lng;
+  final double speed;
+  final int battery;
+  final String status;
+  final DateTime lastUpdated;
+
+  DeviceTelemetry({
+    required this.deviceId,
+    required this.lat,
+    required this.lng,
+    required this.speed,
+    required this.battery,
+    required this.status,
+    required this.lastUpdated,
+  });
+
+  factory DeviceTelemetry.fromMap(String id, Map<dynamic, dynamic> data) {
+    return DeviceTelemetry(
+      deviceId: id,
+      lat: (data['lat'] as num).toDouble(),
+      lng: (data['lng'] as num).toDouble(),
+      speed: (data['speed'] as num).toDouble(),
+      battery: (data['battery'] as int),
+      status: data['status'] ?? 'offline',
+      lastUpdated: DateTime.fromMillisecondsSinceEpoch(data['lastUpdated'] ?? 0),
+    );
+  }
+}
+
+final telemetryServiceProvider = Provider((ref) => TelemetryService());
+
+/// Stream provider for specific device telemetry
+final deviceTelemetryProvider = StreamProvider.family<DeviceTelemetry?, String>((ref, deviceId) {
+  return ref.watch(telemetryServiceProvider).getTelemetryStream(deviceId);
+});
 
 class TelemetryService {
-  // final FirebaseDatabase _db = FirebaseDatabase.instance;
+  final DatabaseReference _db = FirebaseDatabase.instance.ref();
 
-  // Real-time stream from Firebase
-  Stream<List<VehicleTelemetry>> getVehicleStream() {
-    // For now, we return a mock stream that simulates Firebase updates
-    return Stream.periodic(const Duration(seconds: 3), (i) {
-      final random = math.Random();
-      return [
-        VehicleTelemetry(
-          id: 'TRK-8829',
-          latitude: -6.7924 + (random.nextDouble() * 0.01),
-          longitude: 39.2083 + (random.nextDouble() * 0.01),
-          speed: 60.0 + random.nextInt(15),
-          fuelLevel: (80.0 - (i * 0.1)).clamp(0, 100),
-          temperature: 90.0 + random.nextInt(5),
-          status: 'In Transit',
-          driverName: 'Marcus Chen',
-        ),
-        VehicleTelemetry(
-          id: 'TRK-4421',
-          latitude: -6.8234,
-          longitude: 39.2694,
-          speed: 0.0,
-          fuelLevel: 45.0,
-          temperature: 85.0,
-          status: 'Stationary',
-          driverName: 'Sarah Juma',
-        ),
-      ];
+  /// Listens to real-time IoT data from the hardware module
+  Stream<DeviceTelemetry?> getTelemetryStream(String deviceId) {
+    return _db.child('telemetry').child(deviceId).onValue.map((event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>?;
+      if (data == null) return null;
+      return DeviceTelemetry.fromMap(deviceId, data);
     });
-
-    /* 
-    // Actual Firebase Implementation:
-    return _db.ref('vehicles').onValue.map((event) {
-      final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
-      return data.entries.map((e) => VehicleTelemetry.fromMap(e.key, e.value)).toList();
-    });
-    */
   }
+  
+  /// Listens to all operational devices (for Manager/Admin maps)
+  Stream<List<DeviceTelemetry>> getAllTelemetryStream() {
+    return _db.child('telemetry').onValue.map((event) {
+      final Map<dynamic, dynamic>? data = event.snapshot.value as Map<dynamic, dynamic>?;
+      if (data == null) return [];
+      
+      return data.entries.map((e) {
+        return DeviceTelemetry.fromMap(e.key.toString(), e.value as Map<dynamic, dynamic>);
+      }).toList();
+    });
+  }
+
+  Stream<List<VehicleTelemetry>>? getVehicleStream() {}
 }
