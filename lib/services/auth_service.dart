@@ -61,17 +61,16 @@ class AuthService {
     });
   }
 
+// services/auth_service.dart
+
   Future<void> resetPassword(String email) async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
-
-    if (querySnapshot.docs.isEmpty) {
-      throw Exception('No account found with this email address.');
+    try {
+      // DON'T query Firestore here.
+      // Just call Firebase Auth directly.
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      // Handle specific errors like 'user-not-found'
+      throw Exception(e.message ?? 'An error occurred');
     }
-
-    await _auth.sendPasswordResetEmail(email: email);
   }
 }

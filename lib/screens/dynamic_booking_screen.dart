@@ -1,7 +1,7 @@
 // Location: lib/screens/dynamic_booking_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // ADDED: To check if running on Web (kIsWeb)
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/pricing_engine.dart';
@@ -56,7 +56,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   void initState() {
     super.initState();
 
-    // AUTOMATIC INITIALIZATION
     if (widget.initialServiceType != null) {
       _selectedService = ServiceCategory.values.firstWhere(
             (e) => e.name.toLowerCase() == widget.initialServiceType!.toLowerCase(),
@@ -67,7 +66,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
     _distanceController.addListener(_recalculatePrice);
     _weightController.addListener(_recalculatePrice);
 
-    // Auto-detect location on load
     _determineCurrentPosition();
   }
 
@@ -84,6 +82,35 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   }
 
   // ==========================================================
+  // NOTIFICATION SERVICES (SMS & EMAIL)
+  // ==========================================================
+
+  Future<void> _sendSmsNotification(String phoneNumber, double price) async {
+    // In production, trigger this via a Firebase Cloud Function for security.
+    debugPrint("Triggering SMS to $phoneNumber for amount: $price");
+
+    // Logic: Post to your SMS Gateway (Twilio/Africa's Talking)
+    // await http.post(Uri.parse('https://your-server.com/send-sms'), ...);
+  }
+
+  Future<void> _sendEmailNotification(String email, double price) async {
+    // Best Practice: Write to a 'mail' collection in Firestore.
+    // The Firebase "Trigger Email" extension will handle the rest.
+    try {
+      await FirebaseFirestore.instance.collection('mail').add({
+        'to': email,
+        'message': {
+          'subject': 'TRANSOVA Booking Confirmation',
+          'html': '<h1>Booking Received!</h1><p>Your booking for ${PricingEngine.formatCurrency(price)} is being processed.</p>',
+        },
+      });
+      debugPrint("Email notification queued for $email");
+    } catch (e) {
+      debugPrint("Email error: $e");
+    }
+  }
+
+  // ==========================================================
   // HELPER: WEB CORS PROXY
   // ==========================================================
   Uri _buildGoogleApiUri(String googleUrl) {
@@ -97,13 +124,10 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   // 1. SMART LOCATION & GPS DETECTION
   // ==========================================================
   Future<void> _determineCurrentPosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
 
-    permission = await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
@@ -175,7 +199,7 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   }
 
   Future<void> _getPlaceDetails(String placeId, String description, bool isPickup) async {
-    FocusScope.of(context).unfocus(); // Hide keyboard
+    FocusScope.of(context).unfocus();
     setState(() {
       _placePredictions = [];
       _isSearchingPickup = false;
@@ -220,7 +244,7 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   }
 
   // ==========================================================
-  // MAP PICKER LOGIC (FIXED)
+  // MAP PICKER LOGIC
   // ==========================================================
   Future<void> _pickLocationOnMap(TextEditingController controller) async {
     final LatLng? pickedLocation = await Navigator.push(
@@ -241,7 +265,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
         }
       });
 
-      // Automatically convert the tapped coordinates into a readable address
       await _getAddressFromLatLng(pickedLocation, isPickup: isPickup);
 
       if (_pickupLatLng != null && _destinationLatLng != null) {
@@ -253,7 +276,7 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   }
 
   // ==========================================================
-  // DISTANCE CALCULATION TRIGGER (FIXED)
+  // DISTANCE CALCULATION TRIGGER
   // ==========================================================
   Future<void> _calculateDistance() async {
     FocusScope.of(context).unfocus();
@@ -271,7 +294,7 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   }
 
   // ==========================================================
-  // 3. ROUTE, DISTANCE & POLYLINE DRAWING
+  // ROUTE, DISTANCE & POLYLINE DRAWING
   // ==========================================================
   void _setMarker(LatLng point, String id, String title, {bool isDestination = false}) {
     setState(() {
@@ -299,7 +322,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
         if (data['status'] == 'OK') {
           final route = data['routes'][0];
 
-          // Extract Distance & Duration
           final distanceMeters = route['legs'][0]['distance']['value'];
           final double km = distanceMeters / 1000;
           _estimatedDuration = route['legs'][0]['duration']['text'];
@@ -307,7 +329,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
           _distanceController.text = km.toStringAsFixed(1);
           _recalculatePrice();
 
-          // Decode and Draw Polyline
           String encodedPolyline = route['overview_polyline']['points'];
           List<LatLng> polylineCoordinates = _decodePolyline(encodedPolyline);
 
@@ -321,7 +342,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
             ));
           });
 
-          // Zoom map to fit the route
           _fitRouteOnMap();
         }
       }
@@ -385,7 +405,7 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
   }
 
   // ==========================================================
-  // 4. ORIGINAL BUSINESS & PRICING LOGIC
+  // BUSINESS & PRICING LOGIC
   // ==========================================================
   void _recalculatePrice() {
     setState(() {
@@ -456,12 +476,22 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // TRIGGER NOTIFICATIONS
+      await _sendSmsNotification(_phoneController.text, _totalPrice);
+      if (user?.email != null) {
+        await _sendEmailNotification(user!.email!, _totalPrice);
+      }
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking request sent to manager!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Your booking is received, check your email and SMS!'),
+          backgroundColor: Colors.green,
+        ));
         Navigator.pop(context);
       }
     } catch (e) {
       setState(() => _errorMessage = e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booking error: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -512,7 +542,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 15)]),
                   child: Column(
                     children: [
-                      // FIXED: Added onSubmitted to immediately trigger distance calculation
                       TextField(
                         controller: _pickupController,
                         onChanged: (val) => _onSearchChanged(val, true),
@@ -563,7 +592,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
               minChildSize: 0.2,
               maxChildSize: 0.85,
               builder: (context, scrollController) {
-                // FIXED: Opaque GestureDetector prevents touches from falling through to the map.
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => FocusScope.of(context).unfocus(),
@@ -598,7 +626,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
                             const SizedBox(height: 16),
                           ],
 
-                          // Map-Based Inputs WITH MAP PICKER ICONS
                           TextField(
                             controller: _pickupController,
                             decoration: _inputDecoration(
@@ -626,7 +653,6 @@ class _DynamicBookingScreenState extends State<DynamicBookingScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Distance Input
                           Stack(
                             alignment: Alignment.centerRight,
                             children: [
@@ -750,7 +776,6 @@ class MapPickerScreen extends StatefulWidget {
 }
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
-  // Defaulting to Dar es Salaam as a starting point
   LatLng _pickedLocation = const LatLng(-6.816064, 39.280335);
 
   @override

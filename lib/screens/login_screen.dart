@@ -71,18 +71,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Password reset link sent to your email!'),
-              backgroundColor: Colors.green
+            // Change this message to be neutral
+              content: Text('If an account exists for this email, a reset link has been sent.'),
+              backgroundColor: Colors.blueAccent // Use blue for neutral, green for success
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        // Clean up the error string to remove technical jargon
-        String errorText = e.toString();
-        if (errorText.startsWith('Exception: ')) {
-          errorText = errorText.replaceFirst('Exception: ', '');
-        }
+        String errorText = e.toString().replaceFirst('Exception: ', '');
         _showError(errorText);
       }
     } finally {
