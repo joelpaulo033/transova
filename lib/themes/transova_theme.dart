@@ -6,23 +6,33 @@ class TransovaTheme {
   static const Color primary = Color(0xFF000666); // Fixed invalid hex format
   static const Color primaryContainer = Color(0xFF1A237E);
   static const Color onPrimaryContainer = Color(0xFF8690EE);
-  static const Color primaryFixedDim = Color(0xFFBDC2FF); // Updated to match tailwind-config config block precisely
+  static const Color primaryFixedDim = Color(
+    0xFFBDC2FF,
+  ); // Updated to match tailwind-config config block precisely
 
   static const Color secondary = Color(0xFF006E2A);
   static const Color secondaryContainer = Color(0xFF5CFD80);
   static const Color onSecondaryContainer = Color(0xFF00732C);
 
-  static const Color tertiary = Color(0xFF705D00); // Standard base variant for pending tasks
+  static const Color tertiary = Color(
+    0xFF705D00,
+  ); // Standard base variant for pending tasks
   static const Color tertiaryContainer = Color(0xFFC9A800);
   static const Color onTertiaryContainer = Color(0xFF4C3E00);
 
   static const Color error = Color(0xFFBA1A1A); // Urgent alert status
-  static const Color errorContainer = Color(0xFFFFDAD6); // Updated to match config block precisely
-  static const Color onErrorContainer = Color(0xFF93000A); // Updated to match config block precisely
+  static const Color errorContainer = Color(
+    0xFFFFDAD6,
+  ); // Updated to match config block precisely
+  static const Color onErrorContainer = Color(
+    0xFF93000A,
+  ); // Updated to match config block precisely
 
   static const Color background = Color(0xFFF3FAFF);
   static const Color surface = Color(0xFFF3FAFF);
-  static const Color surfaceContainer = Color(0xFFDBF1FE); // Updated to match config block precisely
+  static const Color surfaceContainer = Color(
+    0xFFDBF1FE,
+  ); // Updated to match config block precisely
   static const Color surfaceContainerLow = Color(0xFFE6F6FF);
   static const Color surfaceContainerHigh = Color(0xFFD5ECF8);
   static const Color surfaceContainerHighest = Color(0xFFCFE6F2);
@@ -54,7 +64,9 @@ class TransovaTheme {
 
   static const Color onSurface = Color(0xFF071E27);
   static const Color onSurfaceVariant = Color(0xFF454652);
-  static const Color outline = Color(0xFF767683); // Action boundaries token updated to match config block precisely
+  static const Color outline = Color(
+    0xFF767683,
+  ); // Action boundaries token updated to match config block precisely
   static const Color outlineVariant = Color(0xFFC6C5D4);
   static const Color onBackground = Color(0xFF071E27);
 
@@ -67,12 +79,13 @@ class TransovaTheme {
   static const Color statusCancelledText = Color(0xFFBA1A1A);
 
   // Shape Language Tokens (Converted from specification measurements)
-  static const double radiusSm = 4.0;       // 0.25rem
-  static const double radiusDefault = 8.0;  // 0.5rem (Standard Buttons & Input Form Fields)
-  static const double radiusMd = 12.0;      // 0.75rem
-  static const double radiusLg = 16.0;      // 1rem (Cards & Container Dashboards)
-  static const double radiusXl = 24.0;      // 1.5rem
-  static const double radiusFull = 9999.0;  // Status Chips Pill Shape
+  static const double radiusSm = 4.0; // 0.25rem
+  static const double radiusDefault =
+      8.0; // 0.5rem (Standard Buttons & Input Form Fields)
+  static const double radiusMd = 12.0; // 0.75rem
+  static const double radiusLg = 16.0; // 1rem (Cards & Container Dashboards)
+  static const double radiusXl = 24.0; // 1.5rem
+  static const double radiusFull = 9999.0; // Status Chips Pill Shape
 
   // Spatial Grid Spacing Variables
   static const double spaceXs = 4.0;
@@ -90,7 +103,10 @@ class TransovaTheme {
   static const double tableRowDenseHeight = 36.0;
 
   // Elevation Level Shadows
-  static final BoxBorder level1Border = Border.all(color: outlineVariant, width: 1.0);
+  static final BoxBorder level1Border = Border.all(
+    color: outlineVariant,
+    width: 1.0,
+  );
   static final List<BoxShadow> level2Shadow = [
     BoxShadow(
       color: const Color(0xFF000000).withOpacity(0.05),
@@ -129,11 +145,9 @@ class TransovaTheme {
         onError: onError,
         errorContainer: errorContainer,
         onErrorContainer: onErrorContainer,
-        background: background,
-        onBackground: onBackground,
         surface: surface,
         onSurface: onSurface,
-        surfaceVariant: surfaceVariant,
+        surfaceContainerHighest: surfaceVariant,
         onSurfaceVariant: onSurfaceVariant,
         inverseSurface: inverseSurface,
         onInverseSurface: inverseOnSurface,
@@ -214,7 +228,10 @@ class TransovaTheme {
         errorBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: error, width: 1.0),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: spaceMd, vertical: spaceSm),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: spaceMd,
+          vertical: spaceSm,
+        ),
       ),
 
       // Integrated Custom Button Themes Configuration Helpers
@@ -223,8 +240,13 @@ class TransovaTheme {
           backgroundColor: primaryContainer,
           foregroundColor: onPrimary,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: spaceLg, vertical: spaceSm),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusDefault)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: spaceLg,
+            vertical: spaceSm,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusDefault),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
@@ -232,8 +254,13 @@ class TransovaTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
           side: const BorderSide(color: primary, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: spaceLg, vertical: spaceSm),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusDefault)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: spaceLg,
+            vertical: spaceSm,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusDefault),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),

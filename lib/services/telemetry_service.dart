@@ -30,7 +30,9 @@ class DeviceTelemetry {
       speed: (data['speed'] as num).toDouble(),
       battery: (data['battery'] as int),
       status: data['status'] ?? 'offline',
-      lastUpdated: DateTime.fromMillisecondsSinceEpoch(data['lastUpdated'] ?? 0),
+      lastUpdated: DateTime.fromMillisecondsSinceEpoch(
+        data['lastUpdated'] ?? 0,
+      ),
     );
   }
 }
@@ -38,9 +40,11 @@ class DeviceTelemetry {
 final telemetryServiceProvider = Provider((ref) => TelemetryService());
 
 /// Stream provider for specific device telemetry
-final deviceTelemetryProvider = StreamProvider.family<DeviceTelemetry?, String>((ref, deviceId) {
-  return ref.watch(telemetryServiceProvider).getTelemetryStream(deviceId);
-});
+final deviceTelemetryProvider = StreamProvider.family<DeviceTelemetry?, String>(
+  (ref, deviceId) {
+    return ref.watch(telemetryServiceProvider).getTelemetryStream(deviceId);
+  },
+);
 
 class TelemetryService {
   final DatabaseReference _db = FirebaseDatabase.instance.ref();
@@ -53,18 +57,24 @@ class TelemetryService {
       return DeviceTelemetry.fromMap(deviceId, data);
     });
   }
-  
+
   /// Listens to all operational devices (for Manager/Admin maps)
   Stream<List<DeviceTelemetry>> getAllTelemetryStream() {
     return _db.child('telemetry').onValue.map((event) {
-      final Map<dynamic, dynamic>? data = event.snapshot.value as Map<dynamic, dynamic>?;
+      final Map<dynamic, dynamic>? data =
+          event.snapshot.value as Map<dynamic, dynamic>?;
       if (data == null) return [];
-      
+
       return data.entries.map((e) {
-        return DeviceTelemetry.fromMap(e.key.toString(), e.value as Map<dynamic, dynamic>);
+        return DeviceTelemetry.fromMap(
+          e.key.toString(),
+          e.value as Map<dynamic, dynamic>,
+        );
       }).toList();
     });
   }
 
-  Stream<List<VehicleTelemetry>>? getVehicleStream() {}
+  Stream<List<VehicleTelemetry>>? getVehicleStream() {
+    return null;
+  }
 }

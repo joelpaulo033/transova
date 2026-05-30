@@ -22,9 +22,15 @@ class DriverDashboard extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.directions_car, size: 80, color: Colors.green),
-            const SizedBox(height: 16),
-            const Text('Driver Console', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const Text('Manage your trips and availability here.', style: TextStyle(color: Colors.grey)),
+            SizedBox(height: 16),
+            Text(
+              'Driver Console',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Manage your trips and availability here.',
+              style: TextStyle(color: Colors.grey),
+            ),
           ],
         ),
       ),

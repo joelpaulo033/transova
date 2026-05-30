@@ -22,15 +22,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/',
         builder: (context, state) {
           return userValue.when(
-            loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+            loading: () => const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
             error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
             data: (user) => const DashboardScreen(),
           );
@@ -42,7 +41,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 class RouterRefreshListenable extends ChangeNotifier {
   RouterRefreshListenable(Ref ref) {
-    ref.listen(authStateProvider, (_, __) => notifyListeners());
-    ref.listen(userProvider, (_, __) => notifyListeners());
+    ref.listen(authStateProvider, (_, _) => notifyListeners());
+    ref.listen(userProvider, (_, _) => notifyListeners());
   }
 }

@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Custom function to check user roles
+    function isManagerOrAdmin() {
+      return request.auth != null
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['manager', 'admin'];
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if request.auth.uid == userId || isManagerOrAdmin();
+    }
+
+    // BOOKINGS COLLECTION
+    match /bookings/{bookingId} {
+      // Customers can read their own bookings
+      // Drivers can read bookings assigned to them
+      // Managers/Admins can read all bookings
+      allow read: if isAuthenticated()
+                  && (request.auth.uid == resource.data.customerId
+                      || request.auth.uid == resource.data.assignedDriverId
+                      || isManagerOrAdmin());
+
+      // Customers can create a booking — customerId must match their UID
+      allow create: if isAuthenticated()
+                    && request.auth.uid == request.resource.data.customerId;
+
+      // Customers can cancel their own booking or upload payment receipt (Payment Review)
+      // Drivers can update status for their assigned booking
+      // Managers/Admins can update anything
+      allow update: if isAuthenticated()
+                    && (
+                      // Customer updating their own booking (cancel or payment review)
+                      (request.auth.uid == resource.data.customerId
+                        && request.resource.data.status in ['Cancelled', 'Payment Review'])
+
+                      // Driver updating their assigned booking
+                      || request.auth.uid == resource.data.assignedDriverId
+
+                      // Manager or Admin can update anything
+                      || isManagerOrAdmin()
+                    );
+
+      // Only managers/admins can delete
+      allow delete: if isManagerOrAdmin();
+    }
+
+    // NOTIFICATIONS COLLECTION
+    match /notifications/{notificationId} {
+      // Users can read their own notifications; managers can read all
+      allow read: if isAuthenticated()
+                  && (request.auth.uid == resource.data.userId || isManagerOrAdmin());
+
+      // Any authenticated user can create a notification
+      allow create: if isAuthenticated();
+
+      // Users can update (mark read) or delete their own notifications
+      allow update, delete: if isAuthenticated()
+                            && (request.auth.uid == resource.data.userId || isManagerOrAdmin());
+    }
+
+    // DRIVER LOCATIONS COLLECTION
+    match /drivers_locations/{driverId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == driverId;
+    }
+  }
+}
